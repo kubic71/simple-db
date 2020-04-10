@@ -1,5 +1,6 @@
 # Branches 
-Branches should be named b<nn>_<Task_name>, for example b03_disk_offloading
+Branches should be named `b<nn>_<task_name>`, for example `b03_disk_offloading`
+
 Task name should describe feature being implemented / task being solved
 When you create new branch, add a line with the branch name, description, status and assignee to this file 
 
