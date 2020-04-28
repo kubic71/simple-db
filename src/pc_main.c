@@ -21,8 +21,7 @@
 #include <sys/wait.h>
 
 
-void waitForChild(int s)
-{
+void waitForChild(int s) {
     int status;
     int code;
     int signum;
