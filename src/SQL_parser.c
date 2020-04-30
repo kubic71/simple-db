@@ -3,14 +3,17 @@
 #include <stdbool.h>
 #include <string.h>
 
+bool parse_constraint(char *constraint_str, Constraint *c) {
+    // TODO
+}
+
 bool parse_select(char *sql_str, Select_Query *query) {
     // dummy implementation
     // always return result for input str:
     // "SELECT * WHERE age >= 18"
     query->constraint.fieldId = AGE;
-    query->constraint.comparator = GREATER_OR_EQUAL_TO;
-    query->constraint.fieldVal.id = AGE;
-    query->constraint.fieldVal.val.age = 18;
+    query->constraint.comparator = GREATER_OR_EQUAL;
+    query->constraint.fieldVal.age = 18;
     return true;
 }
 

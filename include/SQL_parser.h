@@ -15,7 +15,7 @@
  * 
  * --- SQL commands ---
  * 
- * SELECT * [WHERE <field_name> <= >= < > == <number> ]
+ * SELECT * [WHERE <field_name> <= >= < > == <value> ]
  * for example: 
  *      SELECT *    // selects the whole table
  *      SELECT * WHERE age >= 18     // get all adults    
@@ -24,13 +24,13 @@
  * for example:
  *      INSERT(2, 21, 180.23, 'Joe Brown')
  * 
- * DELETE WHERE <field_name> <= >= < > == <number>
+ * DELETE WHERE <field_name> <= >= < > == <value>
  * for example:
  *      DELETE WHERE id == 2
  * 
- * UPDATE SET field=value WHERE <numerical_field_name> <= >= < > == <number>
+ * UPDATE SET field=value WHERE <field_name> <= >= < > == <value>
  * for example:
- *      UPDATE SET income=0 WHERE age<15    // children cannot legally work for money
+ *      UPDATE SET height=183.3 WHERE id == 15    // update record number 15
  * 
  * 
  * 
@@ -48,23 +48,17 @@ typedef enum
 typedef enum 
 {
     LOWER,
-    LOWER_OR_EQUAL_TO,
+    LOWER_OR_EQUAL,
     GREATER,
-    GREATER_OR_EQUAL_TO,
+    GREATER_OR_EQUAL,
     EQUAL
 } Comparator;
 
-typedef struct
-{
-    FieldId id;
-
-    union {
+typedef union {
         int id;
         int age;
         double height;
         char name[MAX_STR_LEN];
-    } val;
-
 } FieldVal;
 
 /* 
@@ -80,6 +74,7 @@ typedef struct
 
 typedef struct
 {
+    bool all;
     Constraint constraint;
 } Select_Query;
 
@@ -95,8 +90,8 @@ typedef struct
 
 typedef struct
 {
-    char field[MAX_STR_LEN];
-
+    FieldId fieldId;
+    FieldVal val;
     Constraint constraint;
 } Update_Query;
 
@@ -123,6 +118,8 @@ typedef struct
 
 } SQL_Query;
 
+
+
 /*
  * bool parse_{select, insert, update, delete} methods take sql_srt and pointer to allocated query
  * structure. They try to parse the SQL request, and:
@@ -130,6 +127,10 @@ typedef struct
  *  - if parsing fails, false is returned and the struct is left unchanged
  * 
 */
+
+// subroutine used by parse_{select, insert, delete, update}
+// parses the part "WHERE age >= 10"
+bool parse_constraint(char *constraint_str, Constraint *c);
 
 bool parse_select(char *sql_str, Select_Query *query);
 bool parse_insert(char *sql_str, Insert_Query *query);
