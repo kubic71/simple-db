@@ -1,6 +1,7 @@
 #ifndef SQL_PARSER_H_
 #define SQL_PARSER_H_
 
+#include <stdbool.h>
 #include "table.h"
 
 /*
@@ -10,27 +11,24 @@
  *  - int id
  *  - int age
  *  - double height 
- *  - int income 
  *  - char name[MAX_STR_LEN] 
- *  - char profession[MAX_STR_LEN] 
- *  - char nationality[MAX_STR_LEN]
  * 
  * --- SQL commands ---
  * 
- * SELECT * [WHERE <numerical_field_name> <= >= < > <number> ]
+ * SELECT * [WHERE <field_name> <= >= < > == <number> ]
  * for example: 
  *      SELECT *    // selects the whole table
  *      SELECT * WHERE age >= 18     // get all adults    
  * 
- * INSERT VALUE(id,age,height,income,'name','prof','nationality')
+ * INSERT VALUE(<id>,<age>,<height>,'<name>')
  * for example:
- *      INSERT(2, 21, 180.23, 70800, 'Joe Brown', 'Teacher', 'US')
+ *      INSERT(2, 21, 180.23, 'Joe Brown')
  * 
- * DELETE WHERE <numerical_field_name> <= >= < > <number>
+ * DELETE WHERE <field_name> <= >= < > == <number>
  * for example:
- *      DELETE WHERE 
+ *      DELETE WHERE id == 2
  * 
- * UPDATE SET field=value WHERE <numerical_field_name> <= >= < > <number>
+ * UPDATE SET field=value WHERE <numerical_field_name> <= >= < > == <number>
  * for example:
  *      UPDATE SET income=0 WHERE age<15    // children cannot legally work for money
  * 
@@ -38,82 +36,106 @@
  * 
  */
 
+// To make things simple, we have a static table with int, double and string
+typedef enum 
+{
+    ID,
+    AGE,
+    HEIGHT,
+    NAME
+} FieldId;
 
-enum FieldId{id,age,height,income,name,profession,nationality};
-enum Comparator{lower, lower_or_equal_to, greater, greater_or_equal_to, equal};
-
+typedef enum 
+{
+    LOWER,
+    LOWER_OR_EQUAL_TO,
+    GREATER,
+    GREATER_OR_EQUAL_TO,
+    EQUAL
+} Comparator;
 
 typedef struct
 {
+    FieldId id;
 
-    
+    union {
+        int id;
+        int age;
+        double height;
+        char name[MAX_STR_LEN];
+    } val;
+
 } FieldVal;
 
-  
-typedef struct  
+/* 
+ * Constraint identifies subset of records
+ * for example: age >= 18 represents records of all adults
+ */
+typedef struct
 {
-    /* Represents constraint like age>32 */
     FieldId fieldId;
     Comparator comparator;
-    FieldVal fieldVal;-
+    FieldVal fieldVal;
 } Constraint;
 
-
-typedef struct {
+typedef struct
+{
     Constraint constraint;
 } Select_Query;
 
-typedef struct {
+typedef struct
+{
     T_Record record;
 } Insert_Query;
 
-typedef struct {
+typedef struct
+{
     Constraint constraint;
 } Delete_Query;
 
-typedef struct {
+typedef struct
+{
     char field[MAX_STR_LEN];
 
     Constraint constraint;
 } Update_Query;
 
 
-typedef struct {
+typedef enum 
+{
+    SELECT,
+    INSERT,
+    DELETE,
+    UPDATE
+} QueryType;
 
-    /* 
-    * 's': SELECT
-    * 'i': INSERT
-    * 'd': DELETE
-    * 'u': UPDATE
-    */
-    char type;
+typedef struct
+{
 
-    union
-    {   
-        Select_Query select;
-        Insert_Query insert;
-        Delete_Query delete;
-        Update_Query update;
+    QueryType type;
+
+    union {
+        Select_Query select_q;
+        Insert_Query insert_q;
+        Delete_Query delete_q;
+        Update_Query update_q;
     } query;
 
 } SQL_Query;
 
 /*
- * parse_{select, insert, delete} methods take sql_srt and pointer to allocated query
- * structure. They try to parse the SQL request, and if:
- *  - parsing is successful, SQL_Query structure is updated and true is returned.
- *  - parsing fails, false is returned and the struct is left unchanged
+ * bool parse_{select, insert, update, delete} methods take sql_srt and pointer to allocated query
+ * structure. They try to parse the SQL request, and:
+ *  - if parsing is successful, SQL_Query structure is filled with the parsed data and true is returned.
+ *  - if parsing fails, false is returned and the struct is left unchanged
  * 
 */
 
-bool parse(char *sql_str, SQL_Query *query);
+bool parse_select(char *sql_str, Select_Query *query);
+bool parse_insert(char *sql_str, Insert_Query *query);
+bool parse_delete(char *sql_str, Delete_Query *query);
+bool parse_update(char *sql_str, Update_Query *query);
 
-bool parse_select(char *sql_str, SQL_Query *query); 
-bool parse_insert(char *sql_str, SQL_Query *query);
-bool parse_delete(char *sql_str, SQL_Query *query);
-bool parse_update(char *sql_str, SQL_Query *query);  
-
-void parse_SQL(char * sql_str, SQL_Query * query);
-
+bool parse_SQL(char *sql_str, SQL_Query *query);
 
 #endif /* SQL_PARSER_H_ */
