@@ -6,7 +6,7 @@
 
 /*
  * --- Supported SQL subset --- 
- * This basic implementation has a single table with a fixed number of columuns
+ * This basic implementation has a single table with a fixed number of columns
  * columns:
  *  - int id
  *  - int age
