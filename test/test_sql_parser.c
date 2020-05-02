@@ -24,12 +24,12 @@ void test_parse_constraint_age(void) {
 
 void test_parse_constraint_height(void) {
     Constraint c;
-    bool succ = parse_constraint("WHERE height < 185.81", &c);
+    bool succ = parse_constraint("WHERE height < 185", &c);
     TEST_CHECK(succ);
     
     TEST_CHECK(c.fieldId == HEIGHT);
     TEST_CHECK(c.comparator == LOWER);
-    TEST_CHECK(c.fieldVal.age == 18);
+    TEST_CHECK(c.fieldVal.height == 185);
 }
 
 void test_parse_constraint_name(void) {

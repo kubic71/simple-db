@@ -10,7 +10,7 @@
 bool parse_constraint(char *constraint_str, Constraint *c) {
 
 	int i = 0;
-	char* words[4][15];
+	char words[4][15];
 	bool result = false;
 	bool constraint_result = false;
 
@@ -19,13 +19,13 @@ bool parse_constraint(char *constraint_str, Constraint *c) {
 	char id[] = "ID";
 	char age[] = "AGE";
 	char name[] = "NAME";
-	char height = "HEIGHT";
+	char height[] = "HEIGHT";
 
     char lower[] = "<";
-    char lowerOrEqual = "<=";
+    char lowerOrEqual[] = "<=";
     char greater[] = ">";
-    char greaterOrEqual = ">=";
-    char equal[] = "=";
+    char greaterOrEqual[] = ">=";
+    char equal[] = "==";
 
 	bool first = false;
 	bool second = false;
@@ -33,51 +33,67 @@ bool parse_constraint(char *constraint_str, Constraint *c) {
 	bool forth = false;
 
 
-	const char* delims = " ";  // delimiters - space bar
-	char* token;
-	char* str = strdup(*constraint_str);	//duplicate the string
+	const char* delim = " ";  // delimiters - space bar
+
+	char* str = strdup(constraint_str);	//duplicate the string
 
 	if (str == NULL) {
 		fprintf(stderr, "strdup failed");
 		exit(EXIT_FAILURE);
 	}
 
-//	printf ("Original String: %s\n", ptr);
 
-	token = strtok (str, delims);
+	char *token = strtok(str, delim);
 
 	while (token != NULL) {
 		strcpy(words[i], token);
 		i++;
-		//		printf("%s\n", token);
-		token = strtok (NULL, delims);
+		token = strtok (NULL, delim);
 	}
 
-	if(strcmp(toupper(words[1]), where) == 0)
-		first = true;
+	int j = 0;
+	char ch;
 
-	if(strcmp(toupper(words[2]), id) == 0) {
+	for(int k = 0; k <= 3; k++){
+		j = 0;
+		while (words[k][j]) {
+				ch = words[k][j];
+				words[k][j] = toupper(ch);
+				j++;
+		}
+	}
+
+
+	if(strcmp(words[0], where) == 0){
+		first = true;
+	}
+
+	if(strcmp(words[1], id) == 0) {
 		second = true;
 		c->fieldId = ID;
-		c->fieldVal.id = atoi(words[4]); 				//Here should be checking-error
+		c->fieldVal.id = atoi(words[3]); 				//Here should be checking-error
 		forth = true;
 	}
-	else if(strcmp(toupper(words[2]), name) == 0) {
+	else if(strcmp(words[1], name) == 0) {
 		second = true;
 		c->fieldId = NAME;
-		strcpy(words[4], *c->fieldVal.name);
+//		c->fieldVal.name = words[3];
+		strcpy(c->fieldVal.name, words[3]);				//doesnt work
+//		c->fieldVal.name = name;
 		forth = true;
 	}
-	else if(strcmp(toupper(words[2]), age) == 0) {
+	else if(strcmp(words[1], age) == 0) {
 		second = true;
 		c->fieldId = AGE;
-		c->fieldVal.age = atoi(words[4]); 				//Here should be checking-error
+		c->fieldVal.age = atoi(words[3]); 				//Here should be checking-error
 		forth = true;
 	}
-	else if(strcmp(toupper(words[2]), height) == 0) {
+	else if(strcmp(words[1], height) == 0) {
 		second = true;
 		c->fieldId = HEIGHT;
-		sscanf(words[4], "%f", c->fieldVal.height); 		//Here should be checking-error
+		int number;
+		sscanf(words[3], "%d", &number); 				//Here should be checking-error
+		c->fieldVal.height = number;
 		forth = true;
 	}
 	else {
@@ -87,24 +103,23 @@ bool parse_constraint(char *constraint_str, Constraint *c) {
 //		*c->fieldVal = NULL;
 	}
 
-
-	if(strcmp(toupper(words[3]), lower) == 0) {
+	if(strcmp(words[2], lower) == 0) {
 		third = true;
 		c->comparator = LOWER;
 	}
-	else if(strcmp(toupper(words[3]), lowerOrEqual) == 0) {
+	else if(strcmp(words[2], lowerOrEqual) == 0) {
 		third = true;
 		c->comparator = LOWER_OR_EQUAL;
 	}
-	else if(strcmp(toupper(words[3]), greater) == 0) {
+	else if(strcmp(words[2], greater) == 0) {
 		third = true;
 		c->comparator = GREATER;
 	}
-	else if(strcmp(toupper(words[3]), greaterOrEqual) == 0) {
+	else if(strcmp(words[2], greaterOrEqual) == 0) {
 		third = true;
 		c->comparator = GREATER_OR_EQUAL;
 	}
-	else if(strcmp(toupper(words[3]), equal) == 0) {
+	else if(strcmp(words[2], equal) == 0) {
 		third = true;
 		c->comparator = EQUAL;
 	}
@@ -121,6 +136,7 @@ bool parse_constraint(char *constraint_str, Constraint *c) {
 
 }
 
+
 bool parse_select(char *sql_str, Select_Query *query) {
     // dummy implementation
     // always return result for input str:
@@ -130,78 +146,82 @@ bool parse_select(char *sql_str, Select_Query *query) {
 //    query->constraint.fieldVal.age = 18;
 
 	int i = 0;
-	char* words[6][15];
-	bool result = false;
+	int j = 0;
+	char ch;
+	char words[6][15];
+
+	int result = 0;
 	bool constraint_result = false;
 
 	char select[] = "SELECT";
-	char all = "*";
-	char* constr_str[100];
-
+	char all[] = "*";
+	char empty[] = "EMPTY";
 
 	bool first = false;
 	bool second = false;
 	bool third = false;
 
 
-	const char* delims = " ";  // delimiters - space bar
-	char* token;
-	char* str = strdup(*sql_str);	//duplicate the string
+	for(int k = 0; k <= 5; k++){				//Fill the words array
+		strcpy(words[k], "EMPTY");
+	}
 
+	const char* delim = " ";  		// delimiters - space bar
+
+	char* str = strdup(sql_str);	//duplicate the string
 	if (str == NULL) {
 		fprintf(stderr, "strdup failed");
 		exit(EXIT_FAILURE);
 	}
 
-//	printf ("Original String: %s\n", ptr);
-
-	token = strtok (str, delims);
+	char *token = strtok(str, delim);
 
 	while (token != NULL) {
-		strcpy(words[i], token);
+		strcpy(words[i], token);				//Splitting words
 		i++;
-		//		printf("%s\n", token);
-		token = strtok (NULL, delims);
+		token = strtok(NULL, delim);
 	}
 
-	if(strcmp(toupper(words[1]), select) == 0)
+
+	for(int k = 0; k <= 5; k++){				//Changing letters to uppercase
+		j = 0;
+		while (words[k][j]) {
+				ch = words[k][j];
+				words[k][j] = toupper(ch);
+				j++;
+		}
+	}
+
+	if(strcmp(words[0], select) == 0)
 		first = true;
 
-	if(strcmp(words[2], all) == 0)
+	if(strcmp(words[1], all) == 0)
 		second = true;
 
-	if(words[3] == NULL) {
-//		query->all = true;
-		third = true;
+	if(strcmp(words[2], empty) == 0){
+			third = true;
 	}
-	else {
-		strcpy(constr_str, words[3]);
-		strcpy(constr_str, " ");
-		strcpy(constr_str, words[4]);
-		strcpy(constr_str, " ");
-		strcpy(constr_str, words[5]);
-		strcpy(constr_str, " ");
-		strcat(constr_str, words[6]);
+	else if(first == true && second == true){
 
-		Constraint newConstraint = query->constraint;
-		constraint_result = parse_constraint(*constr_str, &newConstraint);
+	    char constr_str[1000] = {0};
+	    snprintf(constr_str, sizeof(constr_str), "%s %s %s %s",  words[2], words[3], words[4], words[5]);	//Add words
+
+//		constraint_result = parse_constraint(*constr_str, &query->constraint);								//doesnt work (error)
 	}
 
 
-	if(first == true && second == true && third == true && constraint_result == false) {
+	free (str);
+	if(first == true && second == true && third == true){
 		query->all = true;
-//		query->constraint = NULL;
-		result = true;
+		return true;
 	}
 	else if(first == true && second == true && third == false && constraint_result == true){
 		query->all = false;
-		result = true;
+		return true;
 	}
-	else
-		result = false;
-
-	free (str);
-	return result;
+	else {
+		return false;
+	}
 
 }
 bool parse_insert(char *sql_str, Insert_Query *query) {}
