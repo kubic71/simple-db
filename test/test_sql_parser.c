@@ -2,9 +2,10 @@
 #include "SQL_parser.h"
 #include <stdlib.h>
 
+
 void test_parse_constraint_id(void) {
     Constraint c;
-    bool succ = parse_constraint("WHERE id == 3", &c);
+    bool succ = parse_constraint(" WHERE   id  ==   3 ", &c);
     TEST_CHECK(succ);
     
     TEST_CHECK(c.fieldId == ID);
@@ -34,12 +35,14 @@ void test_parse_constraint_height(void) {
 
 void test_parse_constraint_name(void) {
     Constraint c;
-    bool succ = parse_constraint("WHERE name == 'Joe'", &c);
+    bool succ = parse_constraint("WHERE name == 'Joe Brown'", &c);
     TEST_CHECK(succ);
     
     TEST_CHECK(c.fieldId == NAME);
     TEST_CHECK(c.comparator == EQUAL);
-    TEST_CHECK(strcmp(c.fieldVal.name, "Joe") == 0);
+
+    // printf("%s\n", c.fieldVal.name);
+    TEST_CHECK(strcmp(c.fieldVal.name, "Joe Brown") == 0);
 }
 
 void test_parse_constraint_fail_invalid_field(void) {
@@ -53,6 +56,17 @@ void test_parse_coinstraint_fail_invalid_val(void) {
     bool succ = parse_constraint("WHERE id >= lrsi", &c);
     TEST_CHECK(!succ);
 }
+
+void test_parse_constraint_fail_random_bs(void) {
+    Constraint c;
+    bool succ = parse_constraint("This is some random BS, that shouldn't be parsed successfully and should fail!  ", &c);
+    TEST_CHECK(!succ);
+
+    succ = parse_constraint("This", &c);
+    TEST_CHECK(!succ);
+}
+
+
 
 void test_parse_select_1(void)
 {
@@ -71,7 +85,7 @@ void test_parse_select_1(void)
 void test_parse_select_all(void)
 {
     Select_Query query;
-    bool succ = parse_select("SELECT * ", &query);
+    bool succ = parse_select("SELECT *", &query);
     TEST_CHECK(succ);
     TEST_CHECK(query.all == true);
 }
@@ -91,7 +105,8 @@ void test_parse_insert(void) {
 
 void test_parse_delete(void) {
     Delete_Query query;
-    bool succ = parse_delete("DELETE WHERE id == 2", &query);
+    char* testStr = "DELETE WHERE id == 2";
+    bool succ = parse_delete(testStr, &query);
     TEST_CHECK(succ);
 
     TEST_CHECK(query.constraint.fieldId == ID);
@@ -117,7 +132,10 @@ void test_parse_update(void) {
 void test_parse_sql_query(void) {
     // test the parse_SQL method as a whole
     SQL_Query query;
-    bool succ = parse_SQL("SELECT * WHERE height > 180.1", &query);
+    // bool succ = parse_SQL("SELECT * WHERE height > 180.1", &query);
+    char* testStr = "SELECT * WHERE height > 180";
+
+    bool succ = parse_SQL(testStr, &query);
     TEST_CHECK(succ);
 
     TEST_CHECK(query.type == SELECT);
@@ -125,7 +143,8 @@ void test_parse_sql_query(void) {
     TEST_CHECK(s_q->all == false);
     TEST_CHECK(s_q->constraint.fieldId == HEIGHT);
     TEST_CHECK(s_q->constraint.comparator == GREATER);
-    TEST_CHECK(s_q->constraint.fieldVal.height == 180.1);
+    // TEST_CHECK(s_q->constraint.fieldVal.height == 180.1);
+    TEST_CHECK(s_q->constraint.fieldVal.height == 180);
 }
 
 
@@ -138,6 +157,7 @@ TEST_LIST = {
     {"test_parse_constraint_name", test_parse_constraint_name},
     {"test_parse_constraint_fail_invalid_field", test_parse_constraint_fail_invalid_field},
     {"test_parse_coinstraint_fail_invalid_val", test_parse_coinstraint_fail_invalid_val},
+    {"test_parse_constraint_fail_random_bs", test_parse_constraint_fail_random_bs},
 
     {"test_parse_select_1", test_parse_select_1},
     {"test_parse_select_all", test_parse_select_all},
@@ -147,6 +167,8 @@ TEST_LIST = {
     {"test_parse_delete", test_parse_delete},
     {"test_parse_update", test_parse_update},
     {"test_parse_sql_query", test_parse_sql_query},
+
+    // {"", },
 
     {0} /* Test suite must be terminated with {0} */
 };
