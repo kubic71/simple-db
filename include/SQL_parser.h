@@ -57,7 +57,7 @@ typedef enum
 typedef union {
         int id;
         int age;
-        int height;
+        double height;
         char name[MAX_STR_LEN];
 } FieldVal;
 

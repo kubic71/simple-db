@@ -43,6 +43,7 @@ static char *trimWhitespace(char *str)
 
 bool parseSpace(char **str)
 {
+	// at least one space is mandatory
 	if (isspace(**str))
 	{
 		while (isspace(**str))
@@ -52,25 +53,97 @@ bool parseSpace(char **str)
 	return false;
 }
 
-bool parseString(char *input_str, char **start, int *len)
+bool parse_string_in_quotes(char **parsed_str, char *content)
 {
-	if (*input_str != '\'')
+	char *next_char = *parsed_str;
+	if (*next_char != '\'')
 		return false;
 
-	input_str++;
+	next_char++;
 
-	*start = input_str;
-
-	while (*input_str != '\'' & *input_str != 0)
+	while (*next_char != '\'' && *next_char != 0)
 	{
-		input_str++;
+		*content = *next_char;
+		content++;
+		next_char++;
 	}
 
-	if(*input_str == 0)    // didn't fing closing quote	
+	if (*next_char == 0) // didn't find closing quote
 		return false;
-	
+
+	*content = '\0';
+
 	// *input_str now points to the closing quote
-	*len = input_str - (*start);
+	return true;
+}
+
+/*
+ * if parsed_str starts with searched_str, then return true and shift the parsed_str pointer to the first character after the match 
+ * otherwise return false and don't modify the parsed_str pointer
+ */
+static bool parse_str(char **parsed_str, char *searched_str)
+{
+
+	char *next_char = *parsed_str;
+	while (*searched_str != 0)
+	{
+		if (*next_char == 0)
+			return false;
+
+		// comparing character by character
+		if (*next_char != *searched_str)
+		{
+			return false;
+		}
+
+		// move to the next char
+		next_char++;
+		searched_str++;
+	}
+
+	*parsed_str = next_char;
+	return true;
+}
+
+static void parse_token(char **parsed_str, char *word)
+{
+	*parsed_str = trimWhitespace(*parsed_str);
+
+	while (**parsed_str != 0 && !isspace(**parsed_str))
+	{
+		*word = **parsed_str;
+		word++;
+		(*parsed_str)++;
+	}
+
+	*word = '\0';
+}
+
+static bool parse_int(char **parsed_str, int *val)
+{
+	char* backup = *parsed_str;
+	char int_str[20];
+	
+	parse_token(parsed_str, int_str);
+	if (sscanf(int_str, "%d", val) < 1)
+	{
+		return false;
+		*parsed_str = backup;
+	}
+	return true;
+}
+
+static bool parse_double(char **parsed_str, double *val)
+{
+	char* backup = *parsed_str;
+	char double_str[20];
+	
+	parse_token(parsed_str, double_str);
+	if (sscanf(double_str, "%lf", val) < 1)
+	{
+		return false;
+		*parsed_str = backup;
+	}
 	return true;
 }
 
@@ -78,22 +151,18 @@ bool parse_constraint(char *constraint_str, Constraint *c)
 {
 	// constraint_str example:
 	// "WHERE AGE <= 10"
-
-	int i = 0;
-
-	int N_TOKENS = 4;
+	// int N_TOKENS = 4;
 	int MAX_TOKEN_LEN = 15;
 
-	char tokens[N_TOKENS][MAX_TOKEN_LEN];
+	// char tokens[N_TOKENS][MAX_TOKEN_LEN];
 	char *where = "WHERE";
 	char *id = "ID";
 	char *age = "AGE";
 	char *name = "NAME";
 	char *height = "HEIGHT";
-	const char *delim = " ";
+	// const char *delim = " ";
 
-	// !!! we've got memory leak right here!!!
-	
+	/*	
 	char *str = strdup(constraint_str); //duplicate the string
 
 	if (str == NULL)
@@ -101,8 +170,10 @@ bool parse_constraint(char *constraint_str, Constraint *c)
 		fprintf(stderr, "strdup failed");
 		exit(EXIT_FAILURE);
 	}
+	*/
 
 	// copy constraint tokens to tokens array
+	/*
 	char *token = strtok(str, delim);
 	while (token != NULL && i < N_TOKENS)
 	{
@@ -110,37 +181,46 @@ bool parse_constraint(char *constraint_str, Constraint *c)
 		i++;
 		token = strtok(NULL, delim);
 	}
+	*/
 
 	// We don't want to UPPERCASE the last token, which may be string value
 	// We want to distinguish between "Joe", "JOE" and "joe"
+	/*
 	for (i = 0; i < N_TOKENS - 1; i++)
 	{
 		toUpperStr(tokens[i]);
 	}
+	*/
 
-	if (strcmp(tokens[0], where) != 0)
-	{
+	if (!parse_str(&constraint_str, where))
 		return false;
-	}
+
+	constraint_str = trimWhitespace(constraint_str);
+
+	char field_name[MAX_TOKEN_LEN];
+	parse_token(&constraint_str, field_name);
+
+	char comp_str[MAX_TOKEN_LEN];
+	parse_token(&constraint_str, comp_str);
 
 	// parse the < > <= >= ==
-	if (strcmp(tokens[2], "<") == 0)
+	if (strcmp(comp_str, "<") == 0)
 	{
 		c->comparator = LOWER;
 	}
-	else if (strcmp(tokens[2], "<=") == 0)
+	else if (strcmp(comp_str, "<=") == 0)
 	{
 		c->comparator = LOWER_OR_EQUAL;
 	}
-	else if (strcmp(tokens[2], ">") == 0)
+	else if (strcmp(comp_str, ">") == 0)
 	{
 		c->comparator = GREATER;
 	}
-	else if (strcmp(tokens[2], ">=") == 0)
+	else if (strcmp(comp_str, ">=") == 0)
 	{
 		c->comparator = GREATER_OR_EQUAL;
 	}
-	else if (strcmp(tokens[2], "==") == 0)
+	else if (strcmp(comp_str, "==") == 0)
 	{
 		c->comparator = EQUAL;
 	}
@@ -149,45 +229,35 @@ bool parse_constraint(char *constraint_str, Constraint *c)
 		return false;
 	}
 
-	if (strcmp(tokens[1], id) == 0)
+	constraint_str = trimWhitespace(constraint_str);
+
+	if (strcmp(field_name, id) == 0)
 	{
 		c->fieldId = ID;
-		if (sscanf(tokens[3], "%d", &c->fieldVal.id) < 1)
-		{
-			return false;
-		}
+
+		return parse_int(&constraint_str, &c->fieldVal.id);
 	}
-	else if (strcmp(tokens[1], name) == 0)
+	else if (strcmp(field_name, name) == 0)
 	{
 		c->fieldId = NAME;
-		char *s = tokens[3];
-		if (s[0] != '\'' || s[strlen(s) - 1] != '\'')
-		{
-			return false;
-		}
-
-		// Remove single quotes
-		s[strlen(s) - 1] = '\0';
-		s++;
-		strcpy(c->fieldVal.name, s);
+		return parse_string_in_quotes(&constraint_str, c->fieldVal.name);
 	}
-	else if (strcmp(tokens[1], age) == 0)
+	else if (strcmp(field_name, age) == 0)
 	{
 		c->fieldId = AGE;
-		if (sscanf(tokens[3], "%d", &c->fieldVal.age) < 1)
-			return false;
+		return parse_int(&constraint_str, &c->fieldVal.age);
 	}
-	else if (strcmp(tokens[1], height) == 0)
+	else if (strcmp(field_name, height) == 0)
 	{
 		c->fieldId = HEIGHT;
-		if (sscanf(tokens[3], "%d", &c->fieldVal.height) < 1)
-			return false;
+		return parse_double(&constraint_str, &c->fieldVal.height);
 	}
 	else
 	{
 		return false;
 	}
 
+	// unreachable, make compiler happy
 	return true;
 }
 
