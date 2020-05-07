@@ -96,7 +96,8 @@ void test_parse_select_all(void)
 
 void test_parse_insert(void) {
     Insert_Query query;
-    bool succ = parse_insert("INSERT(2, 21, 168.23, 'Joe Brown')",&query);
+    char* query_str = "INSERT(2, 21, 168.23, 'Joe Brown')";
+    bool succ = parse_insert(query_str ,&query);
     TEST_CHECK(succ);
     
     TEST_CHECK(query.record.id == 2);

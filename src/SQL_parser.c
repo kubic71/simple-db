@@ -73,7 +73,9 @@ bool parse_string_in_quotes(char **parsed_str, char *content)
 
 	*content = '\0';
 
-	// *input_str now points to the closing quote
+	// point string pointer to first char after the closing quote
+	*parsed_str = next_char + 1;
+
 	return true;
 }
 
@@ -105,6 +107,7 @@ static bool parse_str(char **parsed_str, char *searched_str)
 	return true;
 }
 
+
 static void parse_token(char **parsed_str, char *word)
 {
 	*parsed_str = trimWhitespace(*parsed_str);
@@ -119,12 +122,34 @@ static void parse_token(char **parsed_str, char *word)
 	*word = '\0';
 }
 
+static bool parse_number(char **parsed_str, char* digits, bool decimal) {
+	
+	int decimal_dots = 0;
+	int char_n = 0;
+
+	while (**parsed_str != 0 && (isdigit(**parsed_str) || (decimal && **parsed_str == '.' && decimal_dots++ == 0)))
+	{
+		*digits = **parsed_str;
+		digits++;
+		(*parsed_str)++;
+		char_n++;
+	}
+
+	*digits = '\0';
+
+	if(char_n == 0) 
+		return false;
+
+	return true;
+}
+
 static bool parse_int(char **parsed_str, int *val)
 {
-	char* backup = *parsed_str;
+	char *backup = *parsed_str;
 	char int_str[20];
-	
-	parse_token(parsed_str, int_str);
+
+
+	parse_number(parsed_str, int_str, false);
 	if (sscanf(int_str, "%d", val) < 1)
 	{
 		return false;
@@ -135,10 +160,10 @@ static bool parse_int(char **parsed_str, int *val)
 
 static bool parse_double(char **parsed_str, double *val)
 {
-	char* backup = *parsed_str;
+	char *backup = *parsed_str;
 	char double_str[20];
-	
-	parse_token(parsed_str, double_str);
+
+	parse_number(parsed_str, double_str, true);
 	if (sscanf(double_str, "%lf", val) < 1)
 	{
 		return false;
@@ -268,6 +293,7 @@ static bool startsWith(const char *pre, const char *str)
 
 bool parse_select(char *sql_str, Select_Query *query)
 {
+	sql_str = trimWhitespace(sql_str);
 	char *PREFIX = "SELECT *";
 	if (strcmp(sql_str, PREFIX) == 0)
 	{
@@ -277,26 +303,44 @@ bool parse_select(char *sql_str, Select_Query *query)
 
 	query->all = false;
 
-	if (startsWith(PREFIX, sql_str))
+	if (parse_str(&sql_str, PREFIX))
 	{
-		sql_str += strlen(PREFIX);
+		sql_str = trimWhitespace(sql_str);
 		return parse_constraint(sql_str, &query->constraint);
 	}
 
 	return false;
 }
 
+static bool parse_comma_delim(char **sql_str)
+{
+
+	char *backup_p = *sql_str;
+
+	*sql_str = trimWhitespace(*sql_str);
+	// printf("delim_str:\n%s\n", *sql_str);
+	if (parse_str(sql_str, ","))
+	{
+		*sql_str = trimWhitespace(*sql_str);
+		return true;
+	}
+
+	*sql_str = backup_p;
+	return false;
+}
+
 bool parse_insert(char *sql_str, Insert_Query *query)
 {
-	return false;
+	// Example:
+	// INSERT(2, 21, 168.23, 'Joe Brown')
+	return parse_str(&sql_str, "INSERT(") && parse_int(&sql_str, &query->record.id) && parse_comma_delim(&sql_str) && parse_int(&sql_str, &query->record.age) && parse_comma_delim(&sql_str) && parse_double(&sql_str, &query->record.height) && parse_comma_delim(&sql_str) && parse_string_in_quotes(&sql_str, query->record.name) && parse_str(&sql_str, ")") && *sql_str == 0;
 }
 
 bool parse_delete(char *sql_str, Delete_Query *query)
 {
 	char *PREFIX = "DELETE ";
-	if (startsWith(PREFIX, sql_str))
+	if (parse_str(&sql_str, PREFIX))
 	{
-		sql_str += strlen(PREFIX);
 		return parse_constraint(sql_str, &query->constraint);
 		return true;
 	}
