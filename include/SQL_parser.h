@@ -37,6 +37,14 @@
  */
 
 // To make things simple, we have a static table with int, double and string
+
+
+#define WHERE_STR "WHERE"
+#define ID_STR "ID"
+#define AGE_STR "AGE"
+#define NAME_STR "NAME"
+#define HEIGHT_STR "HEIGHT"
+
 typedef enum 
 {
     ID,

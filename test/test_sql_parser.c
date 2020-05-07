@@ -132,6 +132,13 @@ void test_parse_update(void) {
     TEST_CHECK(query.constraint.fieldVal.id == 15);
 }
 
+void test_parse_update_bs(void) {
+    Update_Query query;
+    bool succ = parse_update("UPDATE SET NAME=This is some BS that shouldn't be parsed", &query);
+    TEST_CHECK(!succ);
+}
+
+
 
 void test_parse_sql_query(void) {
     // test the parse_SQL method as a whole
@@ -169,7 +176,7 @@ TEST_LIST = {
     {"test_parse_delete", test_parse_delete},
     {"test_parse_update", test_parse_update},
     {"test_parse_sql_query", test_parse_sql_query},
-
+    {"test_parse_update_bs", test_parse_update_bs},
     // {"", },
 
     {0} /* Test suite must be terminated with {0} */

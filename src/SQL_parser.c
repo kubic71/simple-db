@@ -107,7 +107,6 @@ static bool parse_str(char **parsed_str, char *searched_str)
 	return true;
 }
 
-
 static void parse_token(char **parsed_str, char *word)
 {
 	*parsed_str = trimWhitespace(*parsed_str);
@@ -122,8 +121,9 @@ static void parse_token(char **parsed_str, char *word)
 	*word = '\0';
 }
 
-static bool parse_number(char **parsed_str, char* digits, bool decimal) {
-	
+static bool parse_number(char **parsed_str, char *digits, bool decimal)
+{
+
 	int decimal_dots = 0;
 	int char_n = 0;
 
@@ -137,7 +137,7 @@ static bool parse_number(char **parsed_str, char* digits, bool decimal) {
 
 	*digits = '\0';
 
-	if(char_n == 0) 
+	if (char_n == 0)
 		return false;
 
 	return true;
@@ -147,7 +147,6 @@ static bool parse_int(char **parsed_str, int *val)
 {
 	char *backup = *parsed_str;
 	char int_str[20];
-
 
 	parse_number(parsed_str, int_str, false);
 	if (sscanf(int_str, "%d", val) < 1)
@@ -174,50 +173,10 @@ static bool parse_double(char **parsed_str, double *val)
 
 bool parse_constraint(char *constraint_str, Constraint *c)
 {
-	// constraint_str example:
-	// "WHERE AGE <= 10"
-	// int N_TOKENS = 4;
+	constraint_str = trimWhitespace(constraint_str);	
+
 	int MAX_TOKEN_LEN = 15;
-
-	// char tokens[N_TOKENS][MAX_TOKEN_LEN];
-	char *where = "WHERE";
-	char *id = "ID";
-	char *age = "AGE";
-	char *name = "NAME";
-	char *height = "HEIGHT";
-	// const char *delim = " ";
-
-	/*	
-	char *str = strdup(constraint_str); //duplicate the string
-
-	if (str == NULL)
-	{
-		fprintf(stderr, "strdup failed");
-		exit(EXIT_FAILURE);
-	}
-	*/
-
-	// copy constraint tokens to tokens array
-	/*
-	char *token = strtok(str, delim);
-	while (token != NULL && i < N_TOKENS)
-	{
-		strcpy(tokens[i], token);
-		i++;
-		token = strtok(NULL, delim);
-	}
-	*/
-
-	// We don't want to UPPERCASE the last token, which may be string value
-	// We want to distinguish between "Joe", "JOE" and "joe"
-	/*
-	for (i = 0; i < N_TOKENS - 1; i++)
-	{
-		toUpperStr(tokens[i]);
-	}
-	*/
-
-	if (!parse_str(&constraint_str, where))
+	if (!parse_str(&constraint_str, WHERE_STR))
 		return false;
 
 	constraint_str = trimWhitespace(constraint_str);
@@ -256,23 +215,23 @@ bool parse_constraint(char *constraint_str, Constraint *c)
 
 	constraint_str = trimWhitespace(constraint_str);
 
-	if (strcmp(field_name, id) == 0)
+	if (strcmp(field_name, ID_STR) == 0)
 	{
 		c->fieldId = ID;
 
 		return parse_int(&constraint_str, &c->fieldVal.id);
 	}
-	else if (strcmp(field_name, name) == 0)
+	else if (strcmp(field_name, NAME_STR) == 0)
 	{
 		c->fieldId = NAME;
 		return parse_string_in_quotes(&constraint_str, c->fieldVal.name);
 	}
-	else if (strcmp(field_name, age) == 0)
+	else if (strcmp(field_name, AGE_STR) == 0)
 	{
 		c->fieldId = AGE;
 		return parse_int(&constraint_str, &c->fieldVal.age);
 	}
-	else if (strcmp(field_name, height) == 0)
+	else if (strcmp(field_name, HEIGHT_STR) == 0)
 	{
 		c->fieldId = HEIGHT;
 		return parse_double(&constraint_str, &c->fieldVal.height);
@@ -347,7 +306,40 @@ bool parse_delete(char *sql_str, Delete_Query *query)
 
 	return false;
 }
-bool parse_update(char *sql_str, Update_Query *query) { return false; }
+bool parse_update(char *sql_str, Update_Query *query)
+{
+	// Example:
+	// UPDATE SET HEIGHT=183.3 WHERE ID == 15
+
+	char* PREFIX = "UPDATE SET ";
+	if(!parse_str(&sql_str, PREFIX)) {
+		return false;
+	}
+
+	// Parse the set-field
+	if(parse_str(&sql_str, ID_STR "=") && parse_int(&sql_str, &query->val.id)) {
+		query->fieldId=ID;
+
+	} else if (parse_str(&sql_str, AGE_STR "=") && parse_int(&sql_str, &query->val.id)) {
+		query->fieldId=AGE;
+			
+	} else if (parse_str(&sql_str, HEIGHT_STR "=") && parse_double(&sql_str, &query->val.height)) {
+		query->fieldId=HEIGHT;
+
+	} else if (parse_str(&sql_str, NAME_STR "=")) {
+		query->fieldId=NAME;
+		sql_str = trimWhitespace(sql_str);
+		if(!parse_string_in_quotes(&sql_str, query->val.name)) {
+			return false;
+		}
+	} else {
+		return false;
+	} 
+	
+	return parse_constraint(sql_str, &query->constraint);
+
+	return false;
+}
 
 bool parse_SQL(char *sql_str, SQL_Query *query)
 {
