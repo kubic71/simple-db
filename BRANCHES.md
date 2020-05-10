@@ -10,6 +10,5 @@ When you create new branch, add a line with the branch name, description, status
 Branch name | Description | Assignee | Status
 --- | --- | --- | ---
 B00_dummy_branch | This is where you should briefly describe the purpose of this branch. | Joe | MERGED /  IN PROGRESS / ABANDONED ...
-B01_basic_query_parser | Initial implementation of parser parsing SQL requests | Jacob | IN PROGRESS
-
+B01_basic_query_parser | Initial implementation of parser parsing SQL requests | Jacob | MERGED
 
