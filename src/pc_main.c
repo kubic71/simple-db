@@ -9,8 +9,10 @@
 #include <sys/wait.h>
 #include "SQL_parser.h"
 #include "table.h"
+#include "protocol_engine.h"
 
-void waitForChild(int s) {
+void waitForChild(int *s) {
+
     int status;
     int code;
     int signum;
@@ -63,12 +65,11 @@ struct sockaddr_in {
 
  */
 
+//#define MYPORT 8000
+//#define BACKLOG 10
+//#define MAXQUERY 100
 
-#define MYPORT 8000
-#define BACKLOG 10
-#define MAXQUERY 100
-
-int main(int argc, char** argv) {
+int protocol_engine() {
     
     struct sockaddr_in my_addr;
     struct sockaddr_in client_addr;
@@ -124,7 +125,7 @@ int main(int argc, char** argv) {
     
     signal(SIGCHLD, waitForChild);
     
-    /* Main accept loop */
+    /*  accept loop */
     while(1) {
 
 		/*
