@@ -11,4 +11,5 @@ Branch name | Description | Assignee | Status
 --- | --- | --- | ---
 B00_dummy_branch | This is where you should briefly describe the purpose of this branch. | Joe | MERGED /  IN PROGRESS / ABANDONED ...
 B01_basic_query_parser | Initial implementation of parser parsing SQL requests | Jacob | MERGED
+B02_connection_protocol_engine_and_sql_parser | Connection SQL_parser and protocol engine | Daniel | IN PROGRESS 
 
