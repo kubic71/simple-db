@@ -44,6 +44,7 @@
 #define AGE_STR "AGE"
 #define NAME_STR "NAME"
 #define HEIGHT_STR "HEIGHT"
+#define MAX_QUERY_LEN 100
 
 typedef enum 
 {

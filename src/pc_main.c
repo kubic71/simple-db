@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <memory.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -7,136 +9,246 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <errno.h>
 #include "SQL_parser.h"
 #include "table.h"
-#include "protocol_engine.h"
+#include "pc_main.h"
 
-void waitForChild(int *s) {
+static void childSignalHandler(int s)
+{
 
-    int status;
-    int code;
-    int signum;
-    pid_t pid;
+	int status;
+	int code;
+	int signum;
+	pid_t pid;
 
 	// This call notifies not only termination but also state changes from children
 
-	if ((pid = waitpid(-1, &status, WUNTRACED | WCONTINUED)) != -1) {
+	if ((pid = waitpid(-1, &status, WUNTRACED | WCONTINUED)) != -1)
+	{
 		// Status is a multifield value with this information:
 		//      Event: Type of state change (EXITED|TERMINATED BY SIGNAL|STOPPED|CONTINUED)
 		//      Event information: Number of the signal which terminated/stopped the child
 		//      Exit code for exited processes.
 
 		// Use macros to check fields. NEVER USE status directly!!!
-		if (WIFEXITED(status)) {
+		if (WIFEXITED(status))
+		{
 			code = WEXITSTATUS(status);
 			fprintf(stderr, "parent: child %d terminated with exit(%d)\n", pid, code);
 		}
-		if (WIFSIGNALED(status)) {
+		if (WIFSIGNALED(status))
+		{
 			signum = WTERMSIG(status);
 			fprintf(stderr, "parent: child %d kill by signal %d\n", pid, signum);
 		}
-		if (WIFSTOPPED(status)) {
+		if (WIFSTOPPED(status))
+		{
 			signum = WSTOPSIG(status);
 			fprintf(stderr, "parent: child %d stopped by signal %d\n", pid, signum);
 		}
-		if (WIFCONTINUED(status)) {
+		if (WIFCONTINUED(status))
+		{
 			fprintf(stderr, "parent: child %d continued\n", pid);
 		}
 	}
 }
 
-/*
-struct in_addr {
-    unsigned long address;      //4 bytes IP address
-}in_addr1;
+static ssize_t readLine(int fd, void *buffer, size_t n)
+{
+	ssize_t numRead; /* # of bytes fetched by last read() */
+	size_t totRead;	 /* Total bytes read so far */
+	char *buf;
+	char ch;
 
-//its necessary??
-struct sockaddr {
-    unsigned short address_family;      //its necessary??
-    char address_data;                  // protocol address
-}sockaddr1;
+	if (n <= 0 || buffer == NULL)
+	{
+		errno = EINVAL;
+		return -1;
+	}
 
-struct sockaddr_in {
-    short int sin_family;               //address family
-    unsigned short int sin_port;        //port number
-    struct in_addr sin_addr;            //internet address
-    unsigned char siz_zero[8];
-}my_addr;
+	buf = buffer; /* No pointer arithmetic on "void *" */
 
- */
+	totRead = 0;
+	for (;;)
+	{
+		numRead = read(fd, &ch, 1);
 
-//#define MYPORT 8000
-//#define BACKLOG 10
-//#define MAXQUERY 100
+		if (numRead == -1)
+		{
+			if (errno == EINTR) /* Interrupted --> restart read() */
+				continue;
+			else
+				return -1; /* Some other error */
+		}
+		else if (numRead == 0)
+		{					  /* EOF */
+			if (totRead == 0) /* No bytes read; return 0 */
+				return 0;
+			else /* Some bytes read; add '\0' */
+				break;
+		}
+		else
+		{ /* 'numRead' must be 1 if we get here */
+			if (totRead < n - 1)
+			{ /* Discard > (n - 1) bytes */
+				totRead++;
+				*buf++ = ch;
+			}
 
-int protocol_engine() {
-    
-    struct sockaddr_in my_addr;
-    struct sockaddr_in client_addr;
-    
-    memset(&my_addr, 0, sizeof(struct sockaddr_in)); 	//clear structure
-    
-    /*
+			if (ch == '\n') {
+				*(buf - 1) = '\0';
+				totRead--;
+				break;
+			}
+		}
+	}
+
+	*buf = '\0';
+	return totRead;
+}
+
+static int send_msg(int clientFd, char *message)
+{
+	int send_res = send(clientFd, message, strlen(message), 0);
+	if (send_res == -1)
+	{
+		perror("send");
+	}
+
+	return send_res;
+}
+
+/* read 1 line from client and handle the query */
+static void handle_client_query(int client_fd)
+{
+	char sqlCommand[MAX_QUERY_LEN];
+	int recv_res = readLine(client_fd, sqlCommand, MAX_QUERY_LEN);
+	if (recv_res == -1)
+	{
+		perror("Connection closed.");
+		close(client_fd);
+		exit(EXIT_SUCCESS);
+	} else if (recv_res == 0)
+	{
+		/* empty line ends session */
+		printf("Client ended connection.\n");
+		close(client_fd);
+		exit(EXIT_SUCCESS);
+	}
+	
+	printf("Client sent %d bytes of data.\n", recv_res);
+	printf("SQL query: %s\n", sqlCommand);
+
+	SQL_Query test_q;
+	if (parse_SQL(sqlCommand, &test_q))
+	{
+		if (test_q.type == SELECT)
+		{
+			Constraint *constraint = &test_q.query.select_q.constraint;
+			bool all = test_q.query.select_q.all;
+			//				printf("SELECT: %s \n", sqlCommand);
+		}
+		else if (test_q.type == INSERT)
+		{
+			T_Record *rec = &test_q.query.insert_q.record;
+			//				printf("INSERT: %s \n", sqlCommand);
+		}
+		else if (test_q.type == DELETE)
+		{
+			Constraint *constraint = &test_q.query.delete_q.constraint;
+			//				printf("DELETE %s \n", sqlCommand);
+		}
+		else if (test_q.type == UPDATE)
+		{
+			FieldId *id = &test_q.query.update_q.fieldId;
+			FieldVal *val = &test_q.query.update_q.val;
+			Constraint *constraint = &test_q.query.update_q.constraint;
+		}
+
+		int sent = send_msg(client_fd, "SQL query successfully parsed!\n");
+		if(sent == -1) {
+			// socket closed, exit
+			close(client_fd);
+			printf("closed cliend socket\n");
+			exit(EXIT_SUCCESS);
+			
+		}
+	}
+	else
+	{
+		printf("Invalid SQL query!\n");
+		send_msg(client_fd, "Invalid SQL query!\n");
+	}
+
+}
+
+int protocol_engine()
+{
+
+	struct sockaddr_in server_addr;
+
+	memset(&server_addr, 0, sizeof(struct sockaddr_in)); //clear structure
+
+	/*
      * Creation socket. Socket() function return file descriptor
      */
-    int socket_res = socket(PF_INET, SOCK_STREAM, 0);
-	if( socket_res == -1) {
+	int socket_res = socket(PF_INET, SOCK_STREAM, 0);
+	if (socket_res == -1)
+	{
 		perror("socket");
 	}
 
-	my_addr.sin_family = AF_INET;           	// address family AF_INET (IPv4)
-	my_addr.sin_port = htons(MYPORT);           // set my port e.g. 8000
-	my_addr.sin_addr.s_addr = INADDR_ANY;   	//set localhost IP (0.0.0.0)
+	server_addr.sin_family = AF_INET; // address family AF_INET (IPv4)
+	server_addr.sin_port = htons(MYPORT);
+	server_addr.sin_addr.s_addr = INADDR_ANY; // set localhost IP (0.0.0.0)
 
-	char str [INET_ADDRSTRLEN];
-	printf("Server: %s\n", inet_ntop(my_addr.sin_family, &my_addr.sin_addr.s_addr , str, INET_ADDRSTRLEN));
+	char str[INET_ADDRSTRLEN];
+	printf("Starting protocol_engine server on %s:%d\n", inet_ntop(server_addr.sin_family, &server_addr.sin_addr.s_addr, str, INET_ADDRSTRLEN), MYPORT);
 
 	/*
 	 * The error may mean that port is still ocupied in kernel. This code solve the problem.
 	 */
 	int yes = 1;
-	if (setsockopt(socket_res, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
+	if (setsockopt(socket_res, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
+	{
 		perror("setsockopt");
 		exit(1);
 	}
 
-    /*
-     * bind() assigns the address specified by my_addr to the socket referred to by the file descriptor(socket_res).
+	/*
+     * bind() assigns the address specified by server_addr to the socket referred to by the file descriptor(socket_res).
 	*/
-    int bind_res = bind(socket_res, (struct sockaddr *) &my_addr, sizeof(struct sockaddr_in));
-	if(bind_res == -1) {
+	int bind_res = bind(socket_res, (struct sockaddr *)&server_addr, sizeof(struct sockaddr_in));
+	if (bind_res == -1)
+	{
 		perror("bind");
 		exit(EXIT_FAILURE);
 	}
 
-    /*
-     * Listening the port which was choose automatically by used bind() command
-     */
-    int listen_res = listen(socket_res, BACKLOG);
-        if(listen_res== -1) {
-            perror("listen");
-            exit(EXIT_FAILURE);
-        }
-    
-    char sqlCommand[MAXQUERY];
-    int addRecv_res = 0;
-    pid_t pid;
-    SQL_Query test_q;
-    
-    signal(SIGCHLD, waitForChild);
-    
-    /*  accept loop */
-    while(1) {
+	int listen_res = listen(socket_res, BACKLOG);
+	if (listen_res == -1)
+	{
+		perror("listen");
+		exit(EXIT_FAILURE);
+	}
 
-		/*
-		 * Function accept() accept a call from queue
-		 * newSock_res is new socket descriptor.
-		 */
-		int sockaddr_size = sizeof(struct sockaddr_in);
+	int addRecv_res = 0;
+	pid_t pid;
 
-		int newSocket_res = accept(socket_res, (struct sockaddr *) &client_addr, &sockaddr_size);
-		if(newSocket_res == -1) {
-			perror("accept");
+	// register signal handler for incoming child signals
+	signal(SIGCHLD, &childSignalHandler);
+
+	/* Accept client connection and delegate its handling to child process */
+	while (1)
+	{
+		struct sockaddr_in client_addr;
+		socklen_t addr_len;
+		// create a new client socket
+		int client_fd = accept(socket_res, (struct sockaddr *)&client_addr, &addr_len);
+		if (client_fd == -1)
+		{
+			perror("Error when creating client socket.");
 			continue;
 		}
 
@@ -147,8 +259,8 @@ int protocol_engine() {
 
 		pid = fork();
 		/* Errors in fork mean that there is no child process. Parent is alone. */
-		if (pid == -1) {
-			/* Error in fork: This is severe!!! Abort further processing!!! */
+		if (pid == -1)
+		{
 			fprintf(stderr, "parent: error in fork\n");
 			exit(EXIT_FAILURE);
 		}
@@ -157,71 +269,27 @@ int protocol_engine() {
 		 * and child but in their respective process contexts (isolated from each other).
 		 */
 
-		if (pid == 0) {
+		if (pid == 0)
+		{
 			// <POST-FORK CHILD ONLY CODE HERE>
 
-			close(socket_res);    		//In child process use only newSocket_res, so socket_res can be close
-			printf("Child \n");
+			close(socket_res); //In child process we're using only client_fd, so socket_res can be closed
 
-			/*
-			* Reciving SQLCommand
-			*/
-			int recv_res = recv(newSocket_res, sqlCommand, MAXQUERY, 0);
-			if( recv_res == -1) {
-				perror("recv");
-				continue;
+			char clientIP[16];
+			inet_ntop(AF_INET, &client_addr.sin_addr, clientIP, sizeof(clientIP));
+			unsigned int clientPort = ntohs(client_addr.sin_port);
+
+			printf("Incoming connection from %s:%d\n", clientIP, clientPort);
+
+			for(;;) {
+				handle_client_query(client_fd);
 			}
-
-			parse_SQL(sqlCommand, &test_q);
-
-			if(test_q.type == SELECT) {
-			Constraint*  constraint = &test_q.query.select_q.constraint;
-			bool all = &test_q.query.select_q.all;
-//				printf("SELECT: %s \n", sqlCommand);
-			}
-			else if(test_q.type == INSERT) {
-				T_Record* rec = &test_q.query.insert_q.record;
-//				printf("INSERT: %s \n", sqlCommand);
-			}
-			else if(test_q.type == DELETE) {
-			Constraint*  constraint = &test_q.query.delete_q.constraint;
-//				printf("DELETE %s \n", sqlCommand);
-			}
-			else if(test_q.type == UPDATE) {
-			FieldId* id = &test_q.query.update_q.fieldId;
-			FieldVal* val = &test_q.query.update_q.val;
-			Constraint*  constraint = &test_q.query.update_q.constraint;
-//				printf("UPADTE: %s \n", sqlCommand);
-			}
-
-//			printf("SQL COMMAND: %s \n", sqlCommand);
-
-			/*
-			* Waiting for data from database...
-			*/
-
-			char *buf [100];
-			int sendLen = sizeof(buf);
-
-			/*
-			* Sending data to client
-			*/
-			int send_res = send(newSocket_res, buf, sendLen, 0);
-			if( send_res == -1) {
-				perror("send");
-				continue;
-			}
-
-			close(newSocket_res);         //After transaction we can close newSocket.
-			exit(EXIT_FAILURE);
 		}
-		else {
+		else
+		{
 			// <POST-FORK PARENT ONLY CODE HERE>
-			close(newSocket_res);       	//Parent process don't need to newSocket_res
+			close(client_fd); // Parent process don't need client socket
 		}
-    }
-    return (EXIT_SUCCESS);
+	}
+	return (EXIT_SUCCESS);
 }
-
-
-

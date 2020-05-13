@@ -10,7 +10,7 @@ CFLAGS=-g -Wall -I$(INC_DIR)
 
 LIBS=-lm
 
-_DEPS = SQL_parser.h table.h acutest.h protocol_engine.h
+_DEPS = SQL_parser.h table.h acutest.h pc_main.h
 DEPS = $(patsubst %,$(INC_DIR)/%,$(_DEPS))
 
 # sources are compiled into separate obj directory
@@ -23,11 +23,15 @@ OBJ = $(patsubst %,$(OBJ_DIR)/%,$(_OBJ))
 	mkdir -p $(TEST_OBJ_DIR)
 
 
+# compile all source-files
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(DEPS) .pre-build 
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-main_na: $(OBJ) $(DEPS)
-	$(CC) -o $(OBJ_DIR)/$@ $(SRC_DIR)/main.c $(OBJ_DIR)/main.o $(CFLAGS) $(LIBS)
+# create hybrid executable
+# To keep the Makefile as simple as possible, we have only 1 binary that can behave
+# as protocol-engine or transaction-manager depending on command line params
+simple-db: $(OBJ) $(DEPS)
+	$(CC) -o $(OBJ_DIR)/$@ $(OBJ) $(CFLAGS) $(LIBS)
 
 test_sql_parser: $(OBJ) $(DEPS)
 	$(CC) -o $(TEST_OBJ_DIR)/$@ $(TEST_DIR)/test_sql_parser.c $(OBJ_DIR)/SQL_parser.o  $(CFLAGS) $(LIBS)
@@ -35,8 +39,8 @@ test_sql_parser: $(OBJ) $(DEPS)
 
 .PHONY: clean test
 
+# remove all output of compilation
 clean:
-	rm -f protocol_engine 
 	rm -rf $(OBJ_DIR)
 	rm -rf $(TEST_OBJ_DIR)
 	
@@ -44,5 +48,10 @@ clean:
 test: test_sql_parser
 	$(TEST_OBJ_DIR)/test_sql_parser
 	
-main: main_na
-	$(OBJ_DIR)/main_na
+# start protocol-engine
+run-pc: simple-db
+	$(OBJ_DIR)/simple-db pc
+
+# start transaction-manager
+run-tm: simple-db
+	$(OBJ_DIR)/simple-db tm 
