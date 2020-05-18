@@ -113,6 +113,8 @@ typedef enum
     UPDATE
 } QueryType;
 
+#define QUERYTYPE_TO_STR(type) (type == SELECT ? "SELECT" : type == INSERT ? "INSERT": type == DELETE ? "DELETE" : type == UPDATE ? "UPDATE" : "UKNOWN_TYPE")
+
 typedef struct
 {
 

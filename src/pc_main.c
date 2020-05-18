@@ -10,9 +10,21 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <errno.h>
+#include <mqueue.h>
 #include "SQL_parser.h"
 #include "table.h"
 #include "pc_main.h"
+#include "query_mq.h"
+#include "util.h"
+
+
+static mqd_t query_mq;
+
+static void open_query_mq() {
+    /* open the mail queue */
+    query_mq = mq_open(QUERY_QUEUE_NAME, O_WRONLY);
+    CHECK((mqd_t)-1 != query_mq);
+}
 
 static void childSignalHandler(int s)
 {
@@ -108,7 +120,7 @@ static ssize_t readLine(int fd, void *buffer, size_t n)
 	return totRead;
 }
 
-static int send_msg(int clientFd, char *message)
+static int send_to_client(int clientFd, char *message)
 {
 	int send_res = send(clientFd, message, strlen(message), 0);
 	if (send_res == -1)
@@ -139,10 +151,12 @@ static void handle_client_query(int client_fd)
 	
 	printf("Client sent %d bytes of data.\n", recv_res);
 	printf("SQL query: %s\n", sqlCommand);
+	query_msg_t query_msg;
+	query_msg.pid = getpid();
 
-	SQL_Query test_q;
-	if (parse_SQL(sqlCommand, &test_q))
+	if (parse_SQL(sqlCommand, &query_msg.query))
 	{
+		/*
 		if (test_q.type == SELECT)
 		{
 			Constraint *constraint = &test_q.query.select_q.constraint;
@@ -166,19 +180,22 @@ static void handle_client_query(int client_fd)
 			Constraint *constraint = &test_q.query.update_q.constraint;
 		}
 
-		int sent = send_msg(client_fd, "SQL query successfully parsed!\n");
+		*/	
+
+		int sent = send_to_client(client_fd, "SQL query successfully parsed!\n");
+		mq_send(query_mq, (const char *) &query_msg, QUERY_MSG_SIZE, 0);	
+
 		if(sent == -1) {
 			// socket closed, exit
 			close(client_fd);
-			printf("closed cliend socket\n");
+			printf("closed client socket\n");
 			exit(EXIT_SUCCESS);
-			
 		}
 	}
 	else
 	{
 		printf("Invalid SQL query!\n");
-		send_msg(client_fd, "Invalid SQL query!\n");
+		send_to_client(client_fd, "Invalid SQL query!\n");
 	}
 
 }
@@ -233,7 +250,6 @@ int protocol_engine()
 		exit(EXIT_FAILURE);
 	}
 
-	int addRecv_res = 0;
 	pid_t pid;
 
 	// register signal handler for incoming child signals
@@ -280,6 +296,7 @@ int protocol_engine()
 			unsigned int clientPort = ntohs(client_addr.sin_port);
 
 			printf("Incoming connection from %s:%d\n", clientIP, clientPort);
+			open_query_mq();
 
 			for(;;) {
 				handle_client_query(client_fd);

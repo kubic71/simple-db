@@ -8,6 +8,7 @@
 #include <inttypes.h>
 #include <unistd.h>
 
+/*
 static void toUpperStr(char *str)
 {
 	int i = 0;
@@ -17,6 +18,7 @@ static void toUpperStr(char *str)
 		i++;
 	}
 }
+*/
 
 static char *trimWhitespace(char *str)
 {
@@ -245,10 +247,12 @@ bool parse_constraint(char *constraint_str, Constraint *c)
 	return true;
 }
 
+/*
 static bool startsWith(const char *pre, const char *str)
 {
 	return strncmp(pre, str, strlen(pre)) == 0;
 }
+*/
 
 bool parse_select(char *sql_str, Select_Query *query)
 {

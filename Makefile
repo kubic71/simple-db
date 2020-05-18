@@ -8,13 +8,13 @@ TEST_OBJ_DIR = $(TEST_DIR)/obj
 CC=gcc
 CFLAGS=-g -Wall -I$(INC_DIR)
 
-LIBS=-lm
+LIBS=-lm -lrt
 
-_DEPS = SQL_parser.h table.h acutest.h pc_main.h transaction_mg.h
+_DEPS = SQL_parser.h table.h acutest.h pc_main.h transaction_mg.h util.h query_mq.h
 DEPS = $(patsubst %,$(INC_DIR)/%,$(_DEPS))
 
 # sources are compiled into separate obj directory
-_OBJ = SQL_parser.o main.o pc_main.o transaction_mg.o
+_OBJ = SQL_parser.o main.o pc_main.o transaction_mg.o util.o
 OBJ = $(patsubst %,$(OBJ_DIR)/%,$(_OBJ))
 
 
