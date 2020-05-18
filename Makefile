@@ -10,11 +10,11 @@ CFLAGS=-g -Wall -I$(INC_DIR)
 
 LIBS=-lm
 
-_DEPS = SQL_parser.h table.h acutest.h pc_main.h
+_DEPS = SQL_parser.h table.h acutest.h pc_main.h transaction_mg.h
 DEPS = $(patsubst %,$(INC_DIR)/%,$(_DEPS))
 
 # sources are compiled into separate obj directory
-_OBJ = SQL_parser.o main.o pc_main.o 
+_OBJ = SQL_parser.o main.o pc_main.o transaction_mg.o
 OBJ = $(patsubst %,$(OBJ_DIR)/%,$(_OBJ))
 
 

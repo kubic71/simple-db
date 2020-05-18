@@ -1,8 +1,10 @@
 #include "pc_main.h"
+#include "transaction_mg.h"
 #include <stdio.h>
 #include <string.h>
 #include "SQL_parser.h"
 #include "table.h"
+
 
 static void print_usage()
 {
@@ -31,8 +33,7 @@ int main(int argc, char **argv)
    }
    else if (strcmp(service, "tm") == 0)
    {
-      // start transaction-manager
-      printf("Transaction manager not implemented yet!");
+      transaction_mg_main();
    }
    else
    {
