@@ -17,13 +17,14 @@
 #include "query_mq.h"
 #include "util.h"
 
-
 static mqd_t query_mq;
 
-static void open_query_mq() {
-    /* open the mail queue */
-    query_mq = mq_open(QUERY_QUEUE_NAME, O_WRONLY);
-    CHECK((mqd_t)-1 != query_mq);
+static void open_query_mq()
+{
+	/* open the mail queue */
+	struct mq_attr attr = QUERY_QUEUE_ATTR;
+	query_mq = mq_open(QUERY_QUEUE_NAME, O_CREAT | O_WRONLY, QUEUE_PERMS, &attr);
+	CHECK((mqd_t)-1 != query_mq);
 }
 
 static void childSignalHandler(int s)
@@ -34,8 +35,6 @@ static void childSignalHandler(int s)
 	int signum;
 	pid_t pid;
 
-	// This call notifies not only termination but also state changes from children
-
 	if ((pid = waitpid(-1, &status, WUNTRACED | WCONTINUED)) != -1)
 	{
 		// Status is a multifield value with this information:
@@ -43,7 +42,6 @@ static void childSignalHandler(int s)
 		//      Event information: Number of the signal which terminated/stopped the child
 		//      Exit code for exited processes.
 
-		// Use macros to check fields. NEVER USE status directly!!!
 		if (WIFEXITED(status))
 		{
 			code = WEXITSTATUS(status);
@@ -108,7 +106,8 @@ static ssize_t readLine(int fd, void *buffer, size_t n)
 				*buf++ = ch;
 			}
 
-			if (ch == '\n') {
+			if (ch == '\n')
+			{
 				*(buf - 1) = '\0';
 				totRead--;
 				break;
@@ -131,6 +130,28 @@ static int send_to_client(int clientFd, char *message)
 	return send_res;
 }
 
+static void handle_result(int client_fd)
+{
+	// read result from transaction manager and pass it to the client socket
+	char result[RESULT_MSG_SIZE];
+
+	char q_name[sizeof(RESULTS_QUEUE_NAME) + 10];
+	sprintf(q_name, "%s.%d", RESULTS_QUEUE_NAME, getpid());
+
+    struct mq_attr attr = RESULT_QUEUE_ATTR;
+	mqd_t res_mq = mq_open(q_name, O_CREAT | O_RDONLY, QUEUE_PERMS, &attr);
+	CHECK((mqd_t)-1 != res_mq);
+
+	mq_receive(res_mq, result, RESULT_MSG_SIZE, NULL);
+	printf("Query results:%s\n", result);
+
+	int send_res = send(client_fd, result, strlen(result), 0);
+	CHECK(send_res != -1);
+
+	mq_close(res_mq);
+	mq_unlink(q_name);
+}
+
 /* read 1 line from client and handle the query */
 static void handle_client_query(int client_fd)
 {
@@ -141,14 +162,15 @@ static void handle_client_query(int client_fd)
 		perror("Connection closed.");
 		close(client_fd);
 		exit(EXIT_SUCCESS);
-	} else if (recv_res == 0)
+	}
+	else if (recv_res == 0)
 	{
 		/* empty line ends session */
 		printf("Client ended connection.\n");
 		close(client_fd);
 		exit(EXIT_SUCCESS);
 	}
-	
+
 	printf("Client sent %d bytes of data.\n", recv_res);
 	printf("SQL query: %s\n", sqlCommand);
 	query_msg_t query_msg;
@@ -156,48 +178,18 @@ static void handle_client_query(int client_fd)
 
 	if (parse_SQL(sqlCommand, &query_msg.query))
 	{
-		/*
-		if (test_q.type == SELECT)
-		{
-			Constraint *constraint = &test_q.query.select_q.constraint;
-			bool all = test_q.query.select_q.all;
-			//				printf("SELECT: %s \n", sqlCommand);
-		}
-		else if (test_q.type == INSERT)
-		{
-			T_Record *rec = &test_q.query.insert_q.record;
-			//				printf("INSERT: %s \n", sqlCommand);
-		}
-		else if (test_q.type == DELETE)
-		{
-			Constraint *constraint = &test_q.query.delete_q.constraint;
-			//				printf("DELETE %s \n", sqlCommand);
-		}
-		else if (test_q.type == UPDATE)
-		{
-			FieldId *id = &test_q.query.update_q.fieldId;
-			FieldVal *val = &test_q.query.update_q.val;
-			Constraint *constraint = &test_q.query.update_q.constraint;
-		}
+		send_to_client(client_fd, "SQL query successfully parsed!\n");
+		mq_send(query_mq, (const char *)&query_msg, QUERY_MSG_SIZE, 0);
 
-		*/	
+		// wait for a query result from transaction_mg and pass it to client socket
+		handle_result(client_fd);
 
-		int sent = send_to_client(client_fd, "SQL query successfully parsed!\n");
-		mq_send(query_mq, (const char *) &query_msg, QUERY_MSG_SIZE, 0);	
-
-		if(sent == -1) {
-			// socket closed, exit
-			close(client_fd);
-			printf("closed client socket\n");
-			exit(EXIT_SUCCESS);
-		}
 	}
 	else
 	{
 		printf("Invalid SQL query!\n");
 		send_to_client(client_fd, "Invalid SQL query!\n");
 	}
-
 }
 
 int protocol_engine()
@@ -207,9 +199,6 @@ int protocol_engine()
 
 	memset(&server_addr, 0, sizeof(struct sockaddr_in)); //clear structure
 
-	/*
-     * Creation socket. Socket() function return file descriptor
-     */
 	int socket_res = socket(PF_INET, SOCK_STREAM, 0);
 	if (socket_res == -1)
 	{
@@ -226,8 +215,8 @@ int protocol_engine()
 	/*
 	 * The error may mean that port is still ocupied in kernel. This code solve the problem.
 	 */
-	int yes = 1;
-	if (setsockopt(socket_res, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
+	int dummy = 1;
+	if (setsockopt(socket_res, SOL_SOCKET, SO_REUSEADDR, &dummy, sizeof(int)) == -1)
 	{
 		perror("setsockopt");
 		exit(1);
@@ -298,7 +287,8 @@ int protocol_engine()
 			printf("Incoming connection from %s:%d\n", clientIP, clientPort);
 			open_query_mq();
 
-			for(;;) {
+			for (;;)
+			{
 				handle_client_query(client_fd);
 			}
 		}
