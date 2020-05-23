@@ -8,7 +8,7 @@ TEST_OBJ_DIR = $(TEST_DIR)/obj
 CC=gcc
 CFLAGS=-g -Wall -I$(INC_DIR)
 
-LIBS=-lm -lrt
+LIBS=-lm -lrt -lpthread
 
 _DEPS = SQL_parser.h table.h acutest.h pc_main.h transaction_mg.h util.h query_mq.h
 DEPS = $(patsubst %,$(INC_DIR)/%,$(_DEPS))
@@ -43,6 +43,7 @@ test_sql_parser: $(OBJ) $(DEPS)
 clean:
 	rm -rf $(OBJ_DIR)
 	rm -rf $(TEST_OBJ_DIR)
+	# rm -f tm.log pc.log
 	
 
 test: test_sql_parser
@@ -55,3 +56,10 @@ run-pc: simple-db
 # start transaction-manager
 run-tm: simple-db
 	$(OBJ_DIR)/simple-db tm 
+
+# start the whole pipeline just to test 
+run: clean simple-db
+	-killall simple-db
+	stdbuf -o 0 $(OBJ_DIR)/simple-db pc | sed "s/^/pc: /" & 
+	stdbuf -o 0 $(OBJ_DIR)/simple-db tm | sed "s/^/tm: /" &
+	echo "DELETE WHERE AGE > 10" | nc 127.0.0.1 8080
