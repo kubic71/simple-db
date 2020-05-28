@@ -152,6 +152,29 @@ static void handle_result(int client_fd)
 	mq_unlink(q_name);
 }
 
+//static void handle_result(int client_fd)
+//{
+//	// read result from transaction manager and pass it to the client socket
+//	char result[RESULT_MSG_SIZE];
+//	response_msg_t response_msg;
+//
+//	char q_name[sizeof(RESULTS_QUEUE_NAME) + 10];
+//	sprintf(q_name, "%s.%d", RESULTS_QUEUE_NAME, getpid());
+//
+//    struct mq_attr attr = RESULT_QUEUE_ATTR;
+//	mqd_t res_mq = mq_open(q_name, O_CREAT | O_RDONLY, QUEUE_PERMS, &attr);
+//	CHECK((mqd_t)-1 != res_mq);
+//
+//	mq_receive(res_mq, (char *) &response_msg, sizeof(response_msg), NULL);
+//	printf("Query results:%s\n", response_msg.response);
+//
+//	int send_res = send(client_fd, response_msg.response, strlen(response_msg.response), 0);
+//	CHECK(send_res != -1);
+//
+//	mq_close(res_mq);
+//	mq_unlink(q_name);
+//}
+
 /* read 1 line from client and handle the query */
 static void handle_client_query(int client_fd)
 {

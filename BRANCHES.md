@@ -14,3 +14,4 @@ B01_basic_query_parser | Initial implementation of parser parsing SQL requests |
 B02_connection_protocol_engine_and_sql_parser | Connection SQL_parser and protocol engine | Daniel, Jacob | MERGED 
 B03_mq_communication_setup | IPC communication using message queues between protocol-engine and transaction-manager | Jacob | MERGED
 B04_dummy_in-memory_db | Threaded transaction manager operating on in-memory db  | Jacob | IN PROGRESS
+B05_breakdown_of_respond_length | Diviosion a response from storage engine to client | Daniel | IN PROGRESS
