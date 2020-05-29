@@ -34,51 +34,28 @@ static void register_child_handler()
 }
 
 static int responseParts(char dataFromStorage[]){
-
-	int size = sizeof(dataFromStorage);
+	int size = strlen(dataFromStorage);
+//	printf("Size of data in responseParts() function: %d\n", size);
 	int parts = size/1024;
 	return parts;
 }
 
-static response_msg_t response_analyzer(char dataFromStorage[], query_msg_t query_msg, int parts, int part, int parameter)
-{
+static response_msg_t response_analyzer(char dataFromStorage[], query_msg_t query_msg, int parts, int part, int parameter) {
     response_msg_t response_msg;	//respond_msg
-//	int part = 0;
-//	int parameter = 0;
 
 	if(parts == 0)
 	{
-//		response_msg.flag = 0;
-//		response_msg.offset = 0;
-		response_msg.resID = query_msg;
-//		response_msg.totMsgSize = size;
+		response_msg.resID = query_msg;		//to delete??
 		strcpy(response_msg.response, dataFromStorage);
-
 		return response_msg;
 	}
 	else if(parts < 0)
 	{	//Error
 	}
 	else {
-//		for(part = 0; part <= parts; part++, parameter++){
-		/*
-			if(part == 0) {
-				response_msg.flag = 0;
-			}
-			else if(part == parts){
-				response_msg.flag = 2;
-			}
-			else {
-				response_msg.flag = 1;
-			}
-		*/
-//			response_msg.offset = (parameter * 1024)/8;
-			response_msg.resID = query_msg;
-//			response_msg.totMsgSize = size;
-			strncpy(response_msg.response, dataFromStorage, 1024);
-
+			response_msg.resID = query_msg;	//to delete??
+			strncpy(response_msg.response, &dataFromStorage[parameter * 1024], 1024);
 			return response_msg;
-//	}
 	}
 }
 
@@ -117,6 +94,7 @@ void transaction_mg_main()
             mq_close(mq);
 
             response_msg_t response_msg;
+            response_struct_t response_struct;
             int parameter = 0;
             int part = 0;
             int parts = 0;
@@ -126,7 +104,7 @@ void transaction_mg_main()
 //            char result_str[RESULT_MSG_SIZE];
 //            sprintf(result_str, "Echo to process pid=%d\nResults of a request of type %s\n", query_msg.pid, QUERYTYPE_TO_STR(query_msg.query.type));
 
-            char result_str[] = "Echo to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \n";
+            char result_str[] = "\nStart:\nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \n THE END\n";
 //            sprintf(result_str, "Echo to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \nEcho to process pid=\nResults of a request of type \n");
 
             char q_name[sizeof(RESULTS_QUEUE_NAME) + 10];
@@ -137,18 +115,19 @@ void transaction_mg_main()
             mqd_t result_mq = mq_open(q_name, O_CREAT | O_WRONLY, QUEUE_PERMS, &res_mq_attr);
             CHECK((mqd_t)-1 != result_mq);
 
-            printf("Sizeof(Data):%ld\n", sizeof(result_str));
 
+            printf("Strlen(Data):%ld\n", strlen(result_str));
             parts = responseParts(result_str);
 
-            printf("Data size:%ld 	And amount of parts:%d\n", sizeof(result_str), parts);
-
+            response_struct.parts = parts;
+            printf("Data size:%ld 	And amount of parts:%d\n", strlen(result_str), response_struct.parts);
 
             for(part = 0; part <= parts; part++, parameter++) {
             	response_msg = response_analyzer(result_str, query_msg, parts, part, parameter);
-				mq_send(result_mq, (const char *) &response_msg.response, sizeof(response_msg.response), 0);
+            	response_struct.resArr[part] = response_msg;
+            	printf("Response_struct array:%s", response_struct.resArr[part].response);
             }
-
+			mq_send(result_mq, (const char *) &response_struct, sizeof(response_struct), 0);
 //            mq_send(result_mq, result_str, RESULT_MSG_SIZE, 0);
 //            mq_send(result_mq, result_str, sizeof(result_str), 0);
             mq_close(result_mq);
