@@ -10,11 +10,11 @@ CFLAGS=-g -Wall -I$(INC_DIR)
 
 LIBS=-lm -lrt -lpthread
 
-_DEPS = SQL_parser.h table.h acutest.h pc_main.h transaction_mg.h util.h query_mq.h
+_DEPS = SQL_parser.h table.h acutest.h pc_main.h transaction_mg.h util.h query_mq.h in_memory_db.h
 DEPS = $(patsubst %,$(INC_DIR)/%,$(_DEPS))
 
 # sources are compiled into separate obj directory
-_OBJ = SQL_parser.o main.o pc_main.o transaction_mg.o util.o
+_OBJ = SQL_parser.o main.o pc_main.o transaction_mg.o util.o in_memory_db.o
 OBJ = $(patsubst %,$(OBJ_DIR)/%,$(_OBJ))
 
 
@@ -48,6 +48,10 @@ clean:
 
 test: test_sql_parser
 	$(TEST_OBJ_DIR)/test_sql_parser
+
+integ-test: simple-db
+	./test/integration_tests/run_tests.sh
+
 	
 # start protocol-engine
 run-pc: simple-db

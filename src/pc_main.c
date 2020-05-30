@@ -178,7 +178,7 @@ static void handle_client_query(int client_fd)
 
 	if (parse_SQL(sqlCommand, &query_msg.query))
 	{
-		send_to_client(client_fd, "SQL query successfully parsed!\n");
+		// send_to_client(client_fd, "SQL query successfully parsed!\n");
 		mq_send(query_mq, (const char *)&query_msg, QUERY_MSG_SIZE, 0);
 
 		// wait for a query result from transaction_mg and pass it to client socket
