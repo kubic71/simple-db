@@ -23,20 +23,14 @@ typedef struct {
   
 } query_msg_t;
 
-typedef struct {
-	query_msg_t resID;	//Identifier used to distinguish messages
-//	int flag; 	//0->only 1 part OR first part; 1->more parts, but no last; 2->last part;
-//	int offset;
-//	int totMsgSize;
+struct response_msg_t {
 	char response[RESULT_MSG_SIZE];
+};
 
-} response_msg_t;
-
-typedef struct {
+struct init_response_t {
+	int pid;
 	int parts;
-	response_msg_t resArr[];
-
-} response_struct_t;
-
+	char bytes[10];
+};
 
 #endif

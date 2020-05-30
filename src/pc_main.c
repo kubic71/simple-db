@@ -134,9 +134,8 @@ static void handle_result(int client_fd)
 {
 	// read result from transaction manager and pass it to the client socket
 	char result[RESULT_MSG_SIZE];
-	response_struct_t response_struct;
-	int parts;
-	int part;
+	struct init_response_t init_response;
+//	char parts[RESULT_MSG_SIZE];
 
 	char q_name[sizeof(RESULTS_QUEUE_NAME) + 10];
 	sprintf(q_name, "%s.%d", RESULTS_QUEUE_NAME, getpid());
@@ -145,18 +144,23 @@ static void handle_result(int client_fd)
 	mqd_t res_mq = mq_open(q_name, O_CREAT | O_RDONLY, QUEUE_PERMS, &attr);
 	CHECK((mqd_t)-1 != res_mq);
 
-	mq_receive(res_mq, (char *) &response_struct, sizeof(response_struct), NULL);
+	mq_receive(res_mq, (char *) &init_response, RESULT_MSG_SIZE, NULL);
+	CHECK(getpid() == init_response.pid);
 
-	parts = response_struct.parts;
-	printf("Query parts:%d\n", response_struct.parts);
+	printf("Received %s bytes in %d parts\n", init_response.bytes, init_response.parts);
 
 	printf("Query results:\n");
 
-	for(part = 0; part <=parts; part++){
-	strcpy(result, response_struct.resArr[part].response);
-	int send_res = send(client_fd, result, strlen(result), 0);
-	CHECK(send_res != -1);
+	for(int part = 0; part <= init_response.parts; part++){
+		mq_receive(res_mq, (char *) &result, sizeof(result), NULL);
+//		strcpy(result, response_struct.resArr[part].response);
+		printf("%s", result);
+		int send_res = send(client_fd, result, strlen(result), 0);
+		CHECK(send_res != -1);
+
 	}
+//	int send_res = send(client_fd, result, strlen(result), 0);
+//	CHECK(send_res != -1);
 
 	mq_close(res_mq);
 	mq_unlink(q_name);
