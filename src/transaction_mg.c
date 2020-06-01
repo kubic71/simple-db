@@ -9,6 +9,7 @@
 #include "query_mq.h"
 #include "SQL_parser.h"
 #include <signal.h>
+#include <math.h>
 
 static void child_handler(int sig)
 {
@@ -34,9 +35,13 @@ static void register_child_handler()
 }
 
 static int responseParts(char data[]){
-	int size = strlen(data);
-	int parts = size/1024;
-	return parts + 1;
+	double size = strlen(data);
+	double parts = size/1024;
+
+	if(size == 0)
+		return 0;
+	else
+		return ceil(parts);
 }
 
 static struct response_msg_t response_analyzer(char data[], int part) {
@@ -86,8 +91,8 @@ void transaction_mg_main()
 //            	strncat(result_str, (char) i,1);
 //            }
 //            sprintf(result_str, "");
-            sprintf(result_str, "K30TZLJdCfGWWCNHjSUzfiaiKnAzG7FpiEtYBtlQOO11OrLPxEw7ay4lr9WLDikhFolvPvA3oaSfW6gQvEwacNIQabDJw96iAG3QTwQiiRn2eDZ09pKq0b0cOJdJkwtsYEiSHmJcWLxChOqSmvktiwUNmVCBwlf6attlBl3HAb8Ei2A53bYKCnw5557VnJckOO5inNBl8kdzRHGyL0ucXmtbHWarKl66YNW90dNufbvs7bY7ChrhA9t7cOAkL7q85hGvstMIjNiFuqy6roXt6yzH8nQLPGP7fZi9ioGUG3rrR3y6vP2T0lRsdsGdOIf3FDhKjiRD1waRsVFk78FcXfZ9IIcRn8xzw8KSMLMdFjfyCX0Hi2AP0cVIFzsYcAbu3wde06mqTvHOxM3P7utHKwmftISPkUUyR6AKvXufvgQspJnF12jWnnULPxn8LNBSJ5cTor5DbdgZhBB1huV26rbgIIDQI8i65OajT9OlrJeYLjABsmyNIETpvjQJvvvrFKpQk7BRlayD5Z7uMIdJNDn0U4vQbL0U33GpsbAym0MCoYGd743Ln1qTrZr1i69gxX6Rc87CbN2sSEscLYNSLbJaCOxMDsCjXWGrq2YTGgBFx8TynpNhKF6j4vkOrCGnWBkgRfoG3Qypi1QqsX6aGynWD8YsKATfYzPXjmwOksNNDPaDcslh5NxoeD8I2BaOVFKJOKnqb2OoClJC6ELxECEyGz1SltG1Rhnhuds2Z3yZMWTUMDDg4zKvgq6o1bApvkLtrsT5fehVtZnp1VjbO7ZC4gZXZwtS9RkxY02aSRojueAEwUBPwpk9dlY6xikrLqzrxeZ7tapDmhWArKO4XtKZ4GYe41gdixevdhCLYyfZX1EN1Sn0gznbRTtEsA34N412sCvl0fLRuZwjpDZWx5rn3W5AMuveIlJPmForuDqpOHjs7T7AU9wC8t190yRVSz8Q1DlTaKbnfqpyAsiLrm2YlBauXt9ZmEvA7DmymEFcW6o7DaCJlai5qEVlPeDl");
-
+            sprintf(result_str, "JJJd2CfGHjSUzfiaiKnAzG7FpiEtYBtlQOO11OrLPxEw7ay4lr9WLDikhFolvPvA3oaSfW6gQvEwacNIQabDJw96iAG3QTwQiiRn2eDZ09pKq0b0cOJdJkwtsYEiSHmJcWLxChOqSmvktiwUNmVCBwlf6attlBl3HAb8Ei2A53bYKCnw5557VnJckOO5inNBl8kdzRHGyL0ucXmtbHWarKl66YNW90dNufbvs7bY7ChrhA9t7cOAkL7q85hGvstMIjNiFuqy6roXt6yzH8nQLPGP7fZi9ioGUG3rrR3y6vP2T0lRsdsGdOIf3FDhKjiRD1waRsVFk78FcXfZ9IIcRn8xzw8KSMLMdFjfyCX0Hi2AP0cVIFzsYcAbu3wde06mqTvHOxM3P7utHKwmftISPkUUyR6AKvXufvgQspJnF12jWnnULPxn8LNBSJ5cTor5DbdgZhBB1huV26rbgIIDQI8i65OajT9OlrJeYLjABsmyNIETpvjQJvvvrFKpQk7BRlayD5Z7uMIdJNDn0U4vQbL0U33GpsbAym0MCoYGd743Ln1qTrZr1i69gxX6Rc87CbN2sSEscLYNSLbJaCOxMDsCjXWGrq2YTGgBFx8TynpNhKF6j4vkOrCGnWBkgRfoG3Qypi1QqsX6aGynWD8YsKATfYzPXjmwOksNNDPaDcslh5NxoeD8I2BaOVFKJOKnqb2OoClJC6ELxECEyGz1SltG1Rhnhuds2Z3yZMWTUMDDg4zKvgq6o1bApvkLtrsT5fehVtZnp1VjbO7ZC4gZXZwtS9RkxY02aSRojueAEwUBPwpk9dlY6xikrLqzrxeZ7tapDmhWArKO4XtKZ4GYe41gdixevdhCLYyfZX1EN1Sn0gznbRTtEsA34N412sCvl0fLRuZwjpDZWx5rn3W5AMuveIlJPmForuDqpOHjs7T7AU9wC8t190yRVSz8Q1DlTaKbnfqpyAsiLrm2YlBauXt9ZmEvA7DmymEFcW6o7DaCJlai5qEVlPeDl12345");
+//            sprintf(result_str, "123");
             char q_name[sizeof(RESULTS_QUEUE_NAME) + 10];
             sprintf(q_name, "%s.%d", RESULTS_QUEUE_NAME, query_msg.pid);
 

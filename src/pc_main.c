@@ -134,6 +134,7 @@ static void handle_result(int client_fd)
 {
 	// read result from transaction manager and pass it to the client socket
 	char result[RESULT_MSG_SIZE];
+	char *result1 = malloc(sizeof(result));
 	struct init_response_t init_response;
 //	char parts[RESULT_MSG_SIZE];
 
@@ -155,7 +156,9 @@ static void handle_result(int client_fd)
 		mq_receive(res_mq, (char *) &result, sizeof(result), NULL);
 //		strcpy(result, response_struct.resArr[part].response);
 		printf("%s", result);
+//		printf("nope\n");
 		int send_res = send(client_fd, result, strlen(result), 0);
+		memset(result, 0, sizeof(result));
 		CHECK(send_res != -1);
 
 	}
