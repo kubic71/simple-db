@@ -98,4 +98,6 @@ bool satisfy_constraint(T_Record *rec, Constraint *c)
     {
         return double_cmp(c->comparator, rec->height, c->fieldVal.height);
     }
+    return false;
 }
+

@@ -1,5 +1,6 @@
 #include "table.h"
 #include "SQL_parser.h"
+#include <stdlib.h>
 
 void* get_col_by_id(T_Record* rec, FieldId id) {
     switch (id)
@@ -15,5 +16,7 @@ void* get_col_by_id(T_Record* rec, FieldId id) {
     
     case NAME:
         return rec->name;
-    }
+    } 
+
+    return NULL;
 }

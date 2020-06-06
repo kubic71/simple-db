@@ -134,10 +134,6 @@ static void handle_update_query(Update_Query *query, char *result)
     int id = -1;
     int updated_num = 0;
 
-    // there is some overhead when representing numbers as strings
-    char rec_str[sizeof(T_Record) + 100];
-
-
     while ((prec = get_next_record(id, true)) != NULL)
     {
         if(satisfy_constraint(&prec->record, &query->constraint)) {

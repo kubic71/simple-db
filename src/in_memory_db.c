@@ -65,6 +65,10 @@ T_PersistRecord *get_next_record(int id, bool write_lock)
             return prec;
         }
     }
+
+
+    // make compiler happy
+    return NULL;
 }
 
 T_PersistRecord *access_register_read(int id)
