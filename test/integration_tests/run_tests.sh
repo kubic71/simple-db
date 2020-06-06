@@ -17,6 +17,7 @@ run_test () {
 
     echo "executing tm"
     $simple_db tm >/dev/null 2>&1 & 
+    #$simple_db tm &
 
     echo -e "\nInput:" 
     cat $1.in
@@ -26,7 +27,7 @@ run_test () {
     cat $1.in | nc 127.0.0.1 8080 > $1.tmp &
    
     pid=$!
-    sleep  0.1
+    sleep  0.01
     kill $pid
 
     echo -e "\nResult:" 

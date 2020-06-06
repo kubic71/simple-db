@@ -11,6 +11,8 @@
 #include <signal.h>
 #include <pthread.h>
 #include "in_memory_db.h"
+#include "compare.h"
+#include <stdbool.h>
 
 // TODO using threads, maybe not necesary to register signal handlers
 static void child_handler(int sig)
@@ -36,35 +38,136 @@ static void register_child_handler()
     sigaction(SIGCHLD, &sa, NULL);
 }
 
-
-static void connectToStorageEngine() {
+static void connectToStorageEngine()
+{
     // for now, we're using simplified version of database which is only in memory and doesn't use any persistent storage
-    // when Javier finishes storageEngine, we can integrate it with tm_mg  (transaction manager) 
+    // when Javier finishes storageEngine, we can integrate it with tm_mg  (transaction manager)
     // nevertheless, the API should be very similar
     open_table();
 }
 
+static void record_to_str(T_Record *rec, char *str)
+{
+    // id;age;height;name
 
-static void handle_select_query(Select_Query *query, char* result) {
-    strcpy(result, "TODO Select\n");
+    char buffer[sizeof(T_Record)];
+
+    sprintf(buffer, "%d", rec->id);
+    strcpy(str, buffer);
+    strcat(str, ";");
+
+    sprintf(buffer, "%d", rec->age);
+    strcat(str, buffer);
+    strcat(str, ";");
+
+    sprintf(buffer, "%lf", rec->height);
+    strcat(str, buffer);
+    strcat(str, ";");
+
+    strcat(str, rec->name);
 }
 
+static void handle_select_query(Select_Query *query, char *result)
+{
+    T_PersistRecord *prec;
+    int id = -1;
 
-static void handle_delete_query(Delete_Query *query, char* result) {
-    //  TODO
-    strcpy(result, "TODO Delete\n");
+    // there is some overhead when representing numbers as strings
+    char rec_str[sizeof(T_Record) + 100];
+
+    while ((prec = get_next_record(id, false)) != NULL)
+    {
+        if(query->all || satisfy_constraint(&prec->record, &query->constraint)) {
+            record_to_str(&prec->record, rec_str);
+            strcat(result, rec_str);
+            strcat(result, "\n");
+        }
+
+        // move onto the next record
+        id = prec->record.id;
+    }
+
 }
 
+static void handle_delete_query(Delete_Query *query, char *result)
+{
+    
+    T_PersistRecord *prec;
+    int id = -1;
+    int deleted_num = 0;
 
-static void handle_insert_query(Insert_Query *query, char* result) {
-    //  TODO
-    strcpy(result, "TODO Insert\n");
+    while ((prec = get_next_record(id, true)) != NULL)
+    {
+        
+        if(satisfy_constraint(&prec->record, &query->constraint)) {
+            prec->used = false;    
+            deleted_num++;
+        }
+
+        // move onto the next record
+        id = prec->record.id;
+    }
+
+    sprintf(result, "Deleted %d records\n", deleted_num);
 }
 
+static void handle_insert_query(Insert_Query *query, char *result)
+{
+    T_PersistRecord* prec = access_register_write(query->record.id);
 
-static void handle_update_query(Update_Query *query, char* result) {
-    //  TODO
-    strcpy(result, "TODO Update\n");
+    prec->used = true;
+    prec->record.id = query->record.id;
+    prec->record.age = query->record.age;
+    prec->record.height = query->record.height;
+    strcpy(prec->record.name, query->record.name);
+
+    sprintf(result, "Insert OK: %d;%d;%lf;%s\n", prec->record.id, prec->record.age, prec->record.height, prec->record.name);
+
+    release_register(query->record.id);
+    
+
+}
+
+static void handle_update_query(Update_Query *query, char *result)
+{
+    T_PersistRecord *prec;
+    int id = -1;
+    int updated_num = 0;
+
+    // there is some overhead when representing numbers as strings
+    char rec_str[sizeof(T_Record) + 100];
+
+
+    while ((prec = get_next_record(id, true)) != NULL)
+    {
+        if(satisfy_constraint(&prec->record, &query->constraint)) {
+            switch (query->fieldId)
+            {
+            case ID:
+                prec->record.id = query->val.id; 
+                break;
+            
+            case AGE:
+                prec->record.age = query->val.age; 
+                break;
+            
+            case HEIGHT:
+                prec->record.height = query->val.height; 
+                break;
+            
+            case NAME:
+                strcpy(prec->record.name, query->val.name);
+                break;
+            }
+
+            updated_num++;
+        }
+
+        // move onto the next record
+        id = prec->record.id;
+    }
+
+    sprintf(result, "Updated %d records\n", updated_num);
 }
 
 // entry point of the thread that handles incoming queries
@@ -79,7 +182,7 @@ void *handle_query(void *arg)
     switch (query_msg->query.type)
     {
     case SELECT:
-        handle_select_query((Select_Query *) &query_msg->query.query, result_str);
+        handle_select_query((Select_Query *)&query_msg->query.query, result_str);
         break;
     case INSERT:
         handle_insert_query((Insert_Query *)&query_msg->query.query, result_str);
@@ -110,6 +213,9 @@ void *handle_query(void *arg)
     free(arg);
 
     printf("Thread finished processing query (pid=%d)\n", query_msg->pid);
+
+    // make compiler happy
+    return NULL;
 }
 
 void transaction_mg_main()
@@ -125,7 +231,7 @@ void transaction_mg_main()
     register_child_handler();
 
     for (;;)
-   {
+    {
 
         query_msg_t *query_msg = malloc(sizeof(query_msg_t));
         /* receive the query message */

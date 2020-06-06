@@ -1,2 +1,3 @@
+INSERT(2, 21, 168.23, 'Joe Brown')
+INSERT(3, 18, 182.1, 'Billy Will')
 SELECT *
-SELECT * WHERE AGE > 10

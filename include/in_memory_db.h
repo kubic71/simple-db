@@ -11,7 +11,7 @@
  * 
  */
 
-#define NUM_RECORDS 100000    // for testing purposes 
+#define NUM_RECORDS 10    // for testing purposes 
 
 typedef struct {
     bool used;
@@ -25,10 +25,15 @@ void open_table();
 
 
 
-T_Record* access_register_read(int id);
-T_Record* access_register_write(int id);
-void release_register_write(int id);
+T_PersistRecord* access_register_read(int id);
+T_PersistRecord* access_register_write(int id);
+void release_register(int id);
 
-
+/*
+ * Move to the next used record 
+ * When id=-1 is given, return first record
+ * return NULL when there isn't any next record
+ */
+T_PersistRecord* get_next_record(int id, bool write_lock);
 
 #endif // IN_MEMORY_DB_H

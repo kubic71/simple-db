@@ -2,4 +2,8 @@ INSERT(2, 21, 168.23, 'Joe Brown')
 INSERT(3, 18, 182.1, 'Billy Will')
 INSERT(4, 10, 130, 'Kiddie the Kiddo')
 INSERT(5, 15, 153.2, 'Teeny Teenager')
-SELECT * WHERE AGE < 18
+SELECT *
+UPDATE SET HEIGHT=220 WHERE ID == 2
+SELECT *
+UPDATE SET NAME='NoName NoSurname' WHERE ID > 3
+SELECT *

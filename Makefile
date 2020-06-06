@@ -10,11 +10,11 @@ CFLAGS=-g -Wall -I$(INC_DIR)
 
 LIBS=-lm -lrt -lpthread
 
-_DEPS = SQL_parser.h table.h acutest.h pc_main.h transaction_mg.h util.h query_mq.h in_memory_db.h
+_DEPS = SQL_parser.h table.h acutest.h pc_main.h transaction_mg.h util.h query_mq.h in_memory_db.h compare.h
 DEPS = $(patsubst %,$(INC_DIR)/%,$(_DEPS))
 
 # sources are compiled into separate obj directory
-_OBJ = SQL_parser.o main.o pc_main.o transaction_mg.o util.o in_memory_db.o
+_OBJ = SQL_parser.o table.o main.o pc_main.o transaction_mg.o util.o in_memory_db.o compare.o
 OBJ = $(patsubst %,$(OBJ_DIR)/%,$(_OBJ))
 
 
@@ -43,7 +43,6 @@ test_sql_parser: $(OBJ) $(DEPS)
 clean:
 	rm -rf $(OBJ_DIR)
 	rm -rf $(TEST_OBJ_DIR)
-	# rm -f tm.log pc.log
 	
 
 test: test_sql_parser
